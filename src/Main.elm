@@ -77,18 +77,9 @@ view model =
             [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] []
             , button [] [ text "calc" ]
             ]
-        , div []
-            (List.range 1 3
-                |> List.map viewNumberButton
-            )
-        , div []
-            (List.range 4 6
-                |> List.map viewNumberButton
-            )
-        , div []
-            (List.range 7 9
-                |> List.map viewNumberButton
-            )
+        , viewRow 1 3
+        , viewRow 4 6
+        , viewRow 7 9
         , div []
             [ viewNumberButton 0, viewOperatorButton "+", viewOperatorButton "-" ]
         , div []
@@ -104,3 +95,11 @@ viewOperatorButton operatorText =
 viewNumberButton : Int -> Html Msg
 viewNumberButton num =
     button [ Events.onClick (NumClicked num) ] [ text (String.fromInt num) ]
+
+
+viewRow : Int -> Int -> Html Msg
+viewRow start end =
+    div []
+        (List.range start end
+            |> List.map viewNumberButton
+        )
