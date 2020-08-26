@@ -29,12 +29,18 @@ main =
 
 
 type alias Model =
-    Int
+    { currInput : String
+    , operator : Maybe String
+    , prevInput : Maybe String
+    }
 
 
 init : Model
 init =
-    0
+    { currInput = ""
+    , operator = Nothing
+    , prevInput = Nothing
+    }
 
 
 
@@ -42,14 +48,22 @@ init =
 
 
 type Msg
-    = Clicked Int
+    = NumClicked Int
+    | OperatorClicked String
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Clicked num ->
-            model
+        NumClicked num ->
+            { model | currInput = model.currInput ++ String.fromInt num }
+
+        OperatorClicked operator ->
+            { model
+                | prevInput = Just model.currInput
+                , currInput = ""
+                , operator = Just operator
+            }
 
 
 
@@ -60,7 +74,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ div []
-            [ input [] []
+            [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] []
             , button [] [ text "calc" ]
             ]
         , div []
@@ -75,17 +89,18 @@ view model =
             (List.range 7 9
                 |> List.map viewNumberButton
             )
-
-        -- [ button [] [ text "1" ], button [] [ text "2" ], button [] [ text "3" ] ]
-        -- , div []
-        --     [ button [] [ text "4" ], button [] [ text "5" ], button [] [ text "6" ] ]
-        -- , div []
-        --     [ button [] [ text "7" ], button [] [ text "8" ], button [] [ text "9" ] ]
         , div []
-            [ viewNumberButton 0, button [] [ text "+" ], button [] [ text "-" ] ]
+            [ viewNumberButton 0, viewOperatorButton "+", viewOperatorButton "-" ]
+        , div []
+            [ text (Maybe.withDefault "" model.prevInput) ]
         ]
+
+
+viewOperatorButton : String -> Html Msg
+viewOperatorButton operatorText =
+    button [ Events.onClick (OperatorClicked operatorText) ] [ text operatorText ]
 
 
 viewNumberButton : Int -> Html Msg
 viewNumberButton num =
-    button [ Events.onClick (Clicked num) ] [ text (String.fromInt num) ]
+    button [ Events.onClick (NumClicked num) ] [ text (String.fromInt num) ]
