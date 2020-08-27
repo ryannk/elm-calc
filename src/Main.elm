@@ -28,9 +28,32 @@ main =
 -- MODEL
 
 
+type Operator
+    = Plus
+    | Minus
+    | Multiply
+    | Divide
+
+
+operatorToString : Operator -> String
+operatorToString operator =
+    case operator of
+        Plus ->
+            "+"
+
+        Minus ->
+            "-"
+
+        Multiply ->
+            "*"
+
+        Divide ->
+            "/"
+
+
 type alias Model =
     { currInput : String
-    , operator : Maybe String
+    , operator : Maybe Operator
     , prevOutput : Maybe String
     }
 
@@ -49,7 +72,7 @@ init =
 
 type Msg
     = NumClicked Int
-    | OperatorClicked String
+    | OperatorClicked Operator
 
 
 update : Msg -> Model -> Model
@@ -81,7 +104,7 @@ view model =
         , viewRow 4 6
         , viewRow 7 9
         , div []
-            [ viewNumberButton 0, viewOperatorButton "+", viewOperatorButton "-" ]
+            [ viewNumberButton 0, viewOperatorButton "+" Plus, viewOperatorButton "-" Minus ]
         , div []
             [ viewCurrentOperation model ]
         ]
@@ -89,12 +112,15 @@ view model =
 
 viewCurrentOperation : Model -> Html Msg
 viewCurrentOperation model =
-    text (Maybe.withDefault "" model.operator ++ Maybe.withDefault "" model.prevOutput)
+    text
+        ((model.operator |> Maybe.map operatorToString |> Maybe.withDefault "")
+            ++ Maybe.withDefault "" model.prevOutput
+        )
 
 
-viewOperatorButton : String -> Html Msg
-viewOperatorButton operatorText =
-    button [ Events.onClick (OperatorClicked operatorText) ] [ text operatorText ]
+viewOperatorButton : String -> Operator -> Html Msg
+viewOperatorButton operatorText operatorType =
+    button [ Events.onClick (OperatorClicked operatorType) ] [ text operatorText ]
 
 
 viewNumberButton : Int -> Html Msg
