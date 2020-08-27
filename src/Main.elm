@@ -99,22 +99,32 @@ update msg model =
 
         OperatorClicked operator ->
             { model
-                | prevOutput = model.currInput |> String.toInt -- Do better error handling
+                | prevOutput = determineHeldValue operator model -- Do better error handling
                 , currInput = ""
                 , operator = Just operator
             }
 
 
-calculate : Model -> Maybe Int
-calculate model =
+determineHeldValue : Operator -> Model -> Maybe Int
+determineHeldValue operator model =
+    case model.prevOutput of
+        Just prevOutput ->
+            calculate operator model prevOutput
+
+        Nothing ->
+            String.toInt model.currInput
+
+
+calculate : Operator -> Model -> Int -> Maybe Int
+calculate operator model value =
     let
         inputInt =
             model.currInput |> String.toInt
 
         systemOperator =
-            model.operator |> Maybe.map operatorToSystemOperator
+            operatorToSystemOperator operator
     in
-    Maybe.map3 (\op x y -> op x y) systemOperator inputInt model.prevOutput
+    Maybe.map2 systemOperator inputInt model.prevOutput
 
 
 
