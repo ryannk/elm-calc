@@ -54,7 +54,7 @@ operatorToString operator =
 type alias Model =
     { currInput : String
     , operator : Maybe Operator
-    , prevOutput : Maybe String
+    , prevOutput : Maybe Int
     }
 
 
@@ -83,7 +83,7 @@ update msg model =
 
         OperatorClicked operator ->
             { model
-                | prevOutput = Just model.currInput
+                | prevOutput = model.currInput |> String.toInt -- Do better error handling
                 , currInput = ""
                 , operator = Just operator
             }
@@ -114,7 +114,7 @@ viewCurrentOperation : Model -> Html Msg
 viewCurrentOperation model =
     text
         ((model.operator |> Maybe.map operatorToString |> Maybe.withDefault "")
-            ++ Maybe.withDefault "" model.prevOutput
+            ++ (model.prevOutput |> Maybe.map String.fromInt |> Maybe.withDefault "")
         )
 
 
