@@ -31,7 +31,7 @@ main =
 type alias Model =
     { currInput : String
     , operator : Maybe String
-    , prevInput : Maybe String
+    , prevOutput : Maybe String
     }
 
 
@@ -39,7 +39,7 @@ init : Model
 init =
     { currInput = ""
     , operator = Nothing
-    , prevInput = Nothing
+    , prevOutput = Nothing
     }
 
 
@@ -60,7 +60,7 @@ update msg model =
 
         OperatorClicked operator ->
             { model
-                | prevInput = Just model.currInput
+                | prevOutput = Just model.currInput
                 , currInput = ""
                 , operator = Just operator
             }
@@ -83,8 +83,13 @@ view model =
         , div []
             [ viewNumberButton 0, viewOperatorButton "+", viewOperatorButton "-" ]
         , div []
-            [ text (Maybe.withDefault "" model.prevInput) ]
+            [ viewCurrentOperation model ]
         ]
+
+
+viewCurrentOperation : Model -> Html Msg
+viewCurrentOperation model =
+    text (Maybe.withDefault "" model.operator ++ Maybe.withDefault "" model.prevOutput)
 
 
 viewOperatorButton : String -> Html Msg
