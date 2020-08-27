@@ -51,6 +51,22 @@ operatorToString operator =
             "/"
 
 
+operatorToSystemOperator : Operator -> (Int -> Int -> Int)
+operatorToSystemOperator operator =
+    case operator of
+        Plus ->
+            (+)
+
+        Minus ->
+            (-)
+
+        Multiply ->
+            (*)
+
+        Divide ->
+            (//)
+
+
 type alias Model =
     { currInput : String
     , operator : Maybe Operator
@@ -87,6 +103,18 @@ update msg model =
                 , currInput = ""
                 , operator = Just operator
             }
+
+
+calculate : Model -> Maybe Int
+calculate model =
+    let
+        inputInt =
+            model.currInput |> String.toInt
+
+        systemOperator =
+            model.operator |> Maybe.map operatorToSystemOperator
+    in
+    Maybe.map3 (\op x y -> op x y) systemOperator inputInt model.prevOutput
 
 
 
