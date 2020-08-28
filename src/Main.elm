@@ -10,6 +10,7 @@ import Browser
 import Html exposing (..)
 import Html.Attributes as Attr
 import Html.Events as Events exposing (onClick)
+import String
 
 
 
@@ -35,6 +36,12 @@ type Operator
     | Divide
 
 
+type HeldValue
+    = Value Int
+    | PartialOperation Int Operator
+    | None
+
+
 operatorToString : Operator -> String
 operatorToString operator =
     case operator of
@@ -49,6 +56,19 @@ operatorToString operator =
 
         Divide ->
             "/"
+
+
+heldValueToString : HeldValue -> String
+heldValueToString heldValue =
+    case heldValue of
+        Value i ->
+            String.fromInt i
+
+        PartialOperation i op ->
+            String.fromInt i ++ "   " ++ operatorToString op
+
+        None ->
+            " "
 
 
 operatorToSystemOperator : Operator -> (Int -> Int -> Int)
@@ -69,16 +89,16 @@ operatorToSystemOperator operator =
 
 type alias Model =
     { currInput : String
-    , operator : Maybe Operator
-    , prevOutput : Maybe Int
+    , heldValue : HeldValue
+    , error : String
     }
 
 
 init : Model
 init =
     { currInput = ""
-    , operator = Nothing
-    , prevOutput = Nothing
+    , heldValue = None
+    , error = ""
     }
 
 
@@ -99,41 +119,102 @@ update msg model =
             { model | currInput = model.currInput ++ String.fromInt num }
 
         OperatorClicked operator ->
+            let
+                addOperatorResult =
+                    addOperator model.heldValue model.currInput operator
+                        |> (\result ->
+                                case result of
+                                    Ok newHeldValue ->
+                                        ( newHeldValue, "" )
+
+                                    Err message ->
+                                        ( model.heldValue, message )
+                           )
+            in
             { model
-                | prevOutput = determineHeldValue model -- Do better error handling
+                | heldValue = Tuple.first addOperatorResult
                 , currInput = ""
-                , operator = Just operator
+                , error = Tuple.second addOperatorResult
             }
 
+        -- Remove duplication
         Calculate ->
+            let
+                calcOpResult =
+                    calcOp model.heldValue model.currInput
+                        |> (\result ->
+                                case result of
+                                    Ok newHeldValue ->
+                                        ( newHeldValue, "" )
+
+                                    Err message ->
+                                        ( model.heldValue, message )
+                           )
+            in
             { model
-                | prevOutput = determineHeldValue model -- Do better error handling
+                | heldValue = Tuple.first calcOpResult
                 , currInput = ""
-                , operator = Nothing
+                , error = Tuple.second calcOpResult
             }
 
 
-determineHeldValue : Model -> Maybe Int
-determineHeldValue model =
-    case model.prevOutput of
-        -- Bug when operator is null
-        Just currHeldValue ->
-            calculate model currHeldValue
+addOperator : HeldValue -> String -> Operator -> Result String HeldValue
+addOperator currentHeldValue currentInput operator =
+    let
+        parsedInput =
+            String.toInt currentInput
+    in
+    case parsedInput of
+        Just newInput ->
+            case currentHeldValue of
+                Value previousInput ->
+                    Ok (Value (calculate previousInput operator newInput))
+
+                None ->
+                    Ok (PartialOperation newInput operator)
+
+                PartialOperation v o ->
+                    Err "Cannot operate on a value operator pair"
 
         Nothing ->
-            String.toInt model.currInput
+            -- Mising valid case:
+            -- If HeldValue is "Value" and we are adding an op then we will have Partial Op
+            Err "Could not parse input"
 
 
-calculate : Model -> Int -> Maybe Int
-calculate model currHeldValue =
+
+-- Remove duplication
+
+
+calcOp : HeldValue -> String -> Result String HeldValue
+calcOp currentHeldValue currentInput =
     let
-        inputInt =
-            model.currInput |> String.toInt
-
-        systemOperator =
-            Maybe.map operatorToSystemOperator model.operator
+        parsedInput =
+            String.toInt currentInput
     in
-    Maybe.map2 (\op x -> op currHeldValue x) systemOperator inputInt
+    case parsedInput of
+        Just newInput ->
+            case currentHeldValue of
+                Value _ ->
+                    Err "What operator should be used?"
+
+                None ->
+                    Err "I have nothing to calculate against"
+
+                PartialOperation v o ->
+                    Ok (Value (calculate v o newInput))
+
+        Nothing ->
+            Err "Could not parse input"
+
+
+calculate : Int -> Operator -> Int -> Int
+calculate previousValue operator currentInput =
+    let
+        systemOperator =
+            operatorToSystemOperator operator
+    in
+    systemOperator previousValue currentInput
 
 
 
@@ -159,11 +240,7 @@ view model =
 
 viewCurrentOperation : Model -> Html Msg
 viewCurrentOperation model =
-    text
-        ((model.prevOutput |> Maybe.map String.fromInt |> Maybe.withDefault "<>")
-            ++ "    "
-            ++ (model.operator |> Maybe.map operatorToString |> Maybe.withDefault "")
-        )
+    text (heldValueToString model.heldValue)
 
 
 viewOperatorButton : String -> Operator -> Html Msg
