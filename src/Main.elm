@@ -9,7 +9,7 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Attributes as Attr
-import Html.Events as Events
+import Html.Events as Events exposing (onClick)
 
 
 
@@ -89,6 +89,7 @@ init =
 type Msg
     = NumClicked Int
     | OperatorClicked Operator
+    | Calculate
 
 
 update : Msg -> Model -> Model
@@ -104,10 +105,18 @@ update msg model =
                 , operator = Just operator
             }
 
+        Calculate ->
+            { model
+                | prevOutput = determineHeldValue model -- Do better error handling
+                , currInput = ""
+                , operator = Nothing
+            }
+
 
 determineHeldValue : Model -> Maybe Int
 determineHeldValue model =
     case model.prevOutput of
+        -- Bug when operator is null
         Just currHeldValue ->
             calculate model currHeldValue
 
@@ -138,7 +147,7 @@ view model =
             [ viewCurrentOperation model ]
         , div []
             [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] []
-            , button [] [ text "calc" ]
+            , button [ Events.onClick Calculate ] [ text "calc" ]
             ]
         , viewRow 1 3
         , viewRow 4 6
