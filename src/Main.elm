@@ -99,32 +99,32 @@ update msg model =
 
         OperatorClicked operator ->
             { model
-                | prevOutput = determineHeldValue operator model -- Do better error handling
+                | prevOutput = determineHeldValue model -- Do better error handling
                 , currInput = ""
                 , operator = Just operator
             }
 
 
-determineHeldValue : Operator -> Model -> Maybe Int
-determineHeldValue operator model =
+determineHeldValue : Model -> Maybe Int
+determineHeldValue model =
     case model.prevOutput of
-        Just prevOutput ->
-            calculate operator model prevOutput
+        Just currHeldValue ->
+            calculate model currHeldValue
 
         Nothing ->
             String.toInt model.currInput
 
 
-calculate : Operator -> Model -> Int -> Maybe Int
-calculate operator model value =
+calculate : Model -> Int -> Maybe Int
+calculate model currHeldValue =
     let
         inputInt =
             model.currInput |> String.toInt
 
         systemOperator =
-            operatorToSystemOperator operator
+            Maybe.map operatorToSystemOperator model.operator
     in
-    Maybe.map2 systemOperator inputInt model.prevOutput
+    Maybe.map2 (\op x -> op currHeldValue x) systemOperator inputInt
 
 
 
@@ -135,6 +135,8 @@ view : Model -> Html Msg
 view model =
     div []
         [ div []
+            [ viewCurrentOperation model ]
+        , div []
             [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] []
             , button [] [ text "calc" ]
             ]
@@ -143,16 +145,15 @@ view model =
         , viewRow 7 9
         , div []
             [ viewNumberButton 0, viewOperatorButton "+" Plus, viewOperatorButton "-" Minus ]
-        , div []
-            [ viewCurrentOperation model ]
         ]
 
 
 viewCurrentOperation : Model -> Html Msg
 viewCurrentOperation model =
     text
-        ((model.operator |> Maybe.map operatorToString |> Maybe.withDefault "")
-            ++ (model.prevOutput |> Maybe.map String.fromInt |> Maybe.withDefault "")
+        ((model.prevOutput |> Maybe.map String.fromInt |> Maybe.withDefault "<>")
+            ++ "    "
+            ++ (model.operator |> Maybe.map operatorToString |> Maybe.withDefault "")
         )
 
 
