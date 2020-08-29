@@ -7,9 +7,10 @@ module Main exposing (main)
 --
 
 import Browser
-import Html exposing (..)
-import Html.Attributes as Attr
-import Html.Events as Events exposing (onClick)
+import Element exposing (..)
+import Element.Background as Background
+import Element.Font as Font
+import Element.Input as Input
 import String
 
 
@@ -21,7 +22,7 @@ main =
     Browser.sandbox
         { init = init
         , update = update
-        , view = view
+        , view = \model -> Element.layout [] (view model)
         }
 
 
@@ -110,6 +111,7 @@ type Msg
     = NumClicked Int
     | OperatorClicked Operator
     | Calculate
+    | UpdatedField String
 
 
 update : Msg -> Model -> Model
@@ -123,6 +125,11 @@ update msg model =
 
         Calculate ->
             changeHeldValueHandler model (\m -> calculateEvent m.heldValue m.currInput)
+
+        UpdatedField value ->
+            { model
+                | currInput = value
+            }
 
 
 changeHeldValueHandler : Model -> (Model -> Result String HeldValue) -> Model
@@ -215,41 +222,62 @@ evaluate previousValue operator currentInput =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Element Msg
 view model =
-    div []
-        [ div []
-            [ viewCurrentOperation model ]
-        , div []
-            [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] [] -- add on update for typed input
-            , button [ Events.onClick Calculate ] [ text "calc" ]
+    column [ spacing 8 ]
+        [ el [] (viewCurrentOperation model)
+        , row []
+            [ Input.text []
+                { onChange = UpdatedField
+                , text = model.currInput
+                , placeholder = Nothing
+                , label = Input.labelHidden "number input"
+                }
+            , Input.button [] { onPress = Just Calculate, label = text "calc" }
             ]
         , viewRow 1 3
         , viewRow 4 6
         , viewRow 7 9
-        , div []
-            [ viewNumberButton 0, viewOperatorButton "+" Plus, viewOperatorButton "-" Minus ]
+        , row [ spacing 8 ] [ viewNumberButton 0, viewOperatorButton "+" Plus, viewOperatorButton "-" Minus ]
         ]
 
 
-viewCurrentOperation : Model -> Html Msg
+viewCurrentOperation : Model -> Element Msg
 viewCurrentOperation model =
     text (heldValueToString model.heldValue)
 
 
-viewOperatorButton : String -> Operator -> Html Msg
+viewOperatorButton : String -> Operator -> Element Msg
 viewOperatorButton operatorText operatorType =
-    button [ Events.onClick (OperatorClicked operatorType) ] [ text operatorText ]
+    viewCalculatorButton
+        { onPress = Just (OperatorClicked operatorType)
+        , label = text operatorText
+        }
 
 
-viewNumberButton : Int -> Html Msg
+viewNumberButton : Int -> Element Msg
 viewNumberButton num =
-    button [ Events.onClick (NumClicked num) ] [ text (String.fromInt num) ]
+    viewCalculatorButton
+        { onPress = Just (NumClicked num)
+        , label = text (String.fromInt num)
+        }
 
 
-viewRow : Int -> Int -> Html Msg
+viewCalculatorButton =
+    Input.button
+        [ Background.color (rgb255 0 100 200)
+        , Font.color (rgb 1 1 1)
+        , paddingXY 16 8
+        , width (px 48)
+        , mouseOver
+            [ Background.color (rgb255 0 150 250)
+            ]
+        ]
+
+
+viewRow : Int -> Int -> Element Msg
 viewRow start end =
-    div []
+    row [ spacing 8 ]
         (List.range start end
             |> List.map viewNumberButton
         )
