@@ -119,43 +119,31 @@ update msg model =
             { model | currInput = model.currInput ++ String.fromInt num }
 
         OperatorClicked operator ->
-            let
-                addOperatorResult =
-                    addOperator model.heldValue model.currInput operator
-                        |> (\result ->
-                                case result of
-                                    Ok newHeldValue ->
-                                        ( newHeldValue, "" )
+            changeHeldValueHandler model (\m -> addOperator m.heldValue m.currInput operator)
 
-                                    Err message ->
-                                        ( model.heldValue, message )
-                           )
-            in
-            { model
-                | heldValue = Tuple.first addOperatorResult
-                , currInput = ""
-                , error = Tuple.second addOperatorResult
-            }
-
-        -- Remove duplication
         Calculate ->
-            let
-                calcOpResult =
-                    calcOp model.heldValue model.currInput
-                        |> (\result ->
-                                case result of
-                                    Ok newHeldValue ->
-                                        ( newHeldValue, "" )
+            changeHeldValueHandler model (\m -> calculateEvent m.heldValue m.currInput)
 
-                                    Err message ->
-                                        ( model.heldValue, message )
-                           )
-            in
-            { model
-                | heldValue = Tuple.first calcOpResult
-                , currInput = ""
-                , error = Tuple.second calcOpResult
-            }
+
+changeHeldValueHandler : Model -> (Model -> Result String HeldValue) -> Model
+changeHeldValueHandler currModel heldValueEvaluator =
+    let
+        newHeldValueAndError =
+            heldValueEvaluator currModel
+                |> (\result ->
+                        case result of
+                            Ok newHeldValue ->
+                                ( newHeldValue, "" )
+
+                            Err message ->
+                                ( currModel.heldValue, message )
+                   )
+    in
+    { currModel
+        | heldValue = Tuple.first newHeldValueAndError
+        , currInput = ""
+        , error = Tuple.second newHeldValueAndError
+    }
 
 
 addOperator : HeldValue -> String -> Operator -> Result String HeldValue
@@ -168,26 +156,32 @@ addOperator currentHeldValue currentInput operator =
         Just newInput ->
             case currentHeldValue of
                 Value previousInput ->
-                    Ok (Value (calculate previousInput operator newInput))
+                    Ok (Value (evaluate previousInput operator newInput))
 
                 None ->
                     Ok (PartialOperation newInput operator)
 
-                PartialOperation v o ->
+                PartialOperation _ _ ->
                     Err "Cannot operate on a value operator pair"
 
         Nothing ->
-            -- Mising valid case:
-            -- If HeldValue is "Value" and we are adding an op then we will have Partial Op
-            Err "Could not parse input"
+            case currentHeldValue of
+                Value previousInput ->
+                    Ok (PartialOperation previousInput operator)
+
+                None ->
+                    Err "Could not parse input"
+
+                PartialOperation _ _ ->
+                    Err "Could not parse input"
 
 
 
 -- Remove duplication
 
 
-calcOp : HeldValue -> String -> Result String HeldValue
-calcOp currentHeldValue currentInput =
+calculateEvent : HeldValue -> String -> Result String HeldValue
+calculateEvent currentHeldValue currentInput =
     let
         parsedInput =
             String.toInt currentInput
@@ -202,14 +196,14 @@ calcOp currentHeldValue currentInput =
                     Err "I have nothing to calculate against"
 
                 PartialOperation v o ->
-                    Ok (Value (calculate v o newInput))
+                    Ok (Value (evaluate v o newInput))
 
         Nothing ->
             Err "Could not parse input"
 
 
-calculate : Int -> Operator -> Int -> Int
-calculate previousValue operator currentInput =
+evaluate : Int -> Operator -> Int -> Int
+evaluate previousValue operator currentInput =
     let
         systemOperator =
             operatorToSystemOperator operator
@@ -227,7 +221,7 @@ view model =
         [ div []
             [ viewCurrentOperation model ]
         , div []
-            [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] []
+            [ input [ Attr.value model.currInput, Attr.style "text-align" "right" ] [] -- add on update for typed input
             , button [ Events.onClick Calculate ] [ text "calc" ]
             ]
         , viewRow 1 3
